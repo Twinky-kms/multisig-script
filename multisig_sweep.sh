@@ -1,14 +1,15 @@
 #!/bin/bash
 
-# Usage: ./multisig_sweep.sh <MULTISIG_ADDRESS> <DEST_ADDRESS> [FEE]
-# Example: ./multisig_sweep.sh DMultisigAddr DDestAddr 10
+# Usage: ./multisig_sweep.sh <MULTISIG_ADDRESS> <DEST_ADDRESS> <REDEEM_SCRIPT> [FEE]
+# Example: ./multisig_sweep.sh DMultisigAddr DDestAddr '522102...' 10
 
 MULTISIG_ADDRESS="$1"
 DEST_ADDRESS="$2"
-FEE="${3:-10}"
+REDEEM_SCRIPT="$3"
+FEE="${4:-10}"
 
-if [ -z "$MULTISIG_ADDRESS" ] || [ -z "$DEST_ADDRESS" ]; then
-  echo "Usage: $0 <MULTISIG_ADDRESS> <DEST_ADDRESS> [FEE]"
+if [ -z "$MULTISIG_ADDRESS" ] || [ -z "$DEST_ADDRESS" ] || [ -z "$REDEEM_SCRIPT" ]; then
+  echo "Usage: $0 <MULTISIG_ADDRESS> <DEST_ADDRESS> <REDEEM_SCRIPT> [FEE]"
   exit 1
 fi
 
@@ -45,3 +46,11 @@ RAW_TX=$(dingocoin-cli createrawtransaction "$INPUTS" "$OUTPUTS")
 
 echo "Raw transaction created:"
 echo "$RAW_TX"
+
+echo
+# Prepare vins array for signrawtransaction, using the provided redeem script for each input
+VINS=$(echo "$UTXOS" | jq -c --arg rs "$REDEEM_SCRIPT" '[.[] | {txid: .txid, vout: .vout, scriptPubKey: .scriptPubKey, redeemScript: $rs}]')
+
+echo
+echo -n "To sign this transaction, use the following command (replace [\"privkey1\"]):\n"
+echo -n "dingocoin-cli signrawtransaction '$RAW_TX' '$VINS' '[\"privkey1\"]'"
